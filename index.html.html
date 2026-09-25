@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Happy Birthday Card</title>
+<style>
+/* ============ EDIT THESE VALUES TO CUSTOMIZE ============ */
+:root{
+  --name: "Alex";                 /* used only as a comment reference; real name set in JS CONFIG below */
+  --pink:#ffd1e3; --pink2:#ffb6c9; --lav:#e3d1ff; --mint:#d1ffe8; --peach:#ffe3d1;
+  --text:#5a3e5a; --card-bg:#fffafd; --accent:#ff6fa5;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --text:#3a2438; --card-bg:#fff5fa; }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;font-family:'Segoe UI',Verdana,sans-serif;background:linear-gradient(135deg,var(--pink),var(--lav));overflow-x:hidden;}
+body{color:var(--text);min-height:100%;}
+.step{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;position:relative;}
+.step.active{display:flex;}
+h1{font-size:clamp(1.6rem,6vw,2.6rem);margin:.2em 0;color:var(--accent);text-shadow:1px 1px 0 #fff;}
+p{font-size:1.05rem;max-width:600px;line-height:1.6;}
+button{cursor:pointer;border:none;border-radius:30px;padding:14px 32px;font-size:1rem;font-weight:600;
+  background:var(--accent);color:#fff;box-shadow:0 6px 14px rgba(255,111,165,.4);margin-top:24px;transition:transform .2s;}
+button:hover{transform:scale(1.06);}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.hidden{display:none!important;}
+
+/* ---- confetti ---- */
+#confetti-canvas{position:fixed;inset:0;pointer-events:none;z-index:1;}
+
+/* ---- Step 2: balloons ---- */
+.balloon-field{position:relative;width:100%;max-width:700px;height:60vh;margin-top:10px;}
+.balloon{position:absolute;bottom:-20px;width:70px;height:90px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  cursor:pointer;animation:float 6s ease-in-out infinite;box-shadow:inset -8px -8px 15px rgba(0,0,0,.08);}
+.balloon::after{content:'';position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);width:2px;height:20px;background:#8886;}
+.balloon.popped{display:none;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-40px);}}
+.pop-fx{position:absolute;font-size:2.5rem;pointer-events:none;animation:popfade .6s ease-out forwards;}
+@keyframes popfade{from{opacity:1;transform:scale(.5);}to{opacity:0;transform:scale(2);}}
+.wish-modal{position:fixed;inset:0;background:rgba(90,62,90,.35);display:flex;align-items:center;justify-content:center;z-index:20;}
+.wish-box{background:var(--card-bg);padding:28px 24px;border-radius:20px;max-width:340px;box-shadow:0 12px 30px rgba(0,0,0,.2);animation:pop .3s;}
+@keyframes pop{from{transform:scale(.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+/* ---- Step 3: cake ---- */
+.cake-wrap{position:relative;margin-top:10px;}
+.cake{width:220px;position:relative;}
+.candle{width:6px;height:34px;background:#fff;margin:0 auto;position:relative;border-radius:2px;}
+.candle .flame{position:absolute;top:-16px;left:50%;transform:translateX(-50%);width:10px;height:16px;border-radius:50% 50% 50% 50%/60% 60% 40% 40%;
+  background:radial-gradient(circle,#ffe58a,#ff9f43);cursor:pointer;transition:opacity .3s,transform .3s;}
+.candle.out .flame{opacity:0;transform:translateX(-50%) scale(0);}
+.candles{display:flex;gap:16px;justify-content:center;margin-bottom:-6px;position:relative;z-index:2;}
+.tier{background:linear-gradient(#ffb6c9,#ff8fb3);border-radius:10px;margin:0 auto;position:relative;transition:transform .8s ease;}
+.tier1{width:220px;height:60px;}
+.tier2{width:170px;height:55px;background:linear-gradient(#e3d1ff,#c9a8ff);}
+.tier3{width:120px;height:50px;background:linear-gradient(#d1ffe8,#a8ffcf);}
+.plate{width:250px;height:14px;background:#fff;border-radius:50%;margin:0 auto;box-shadow:0 4px 6px rgba(0,0,0,.1);}
+.cake.cut .tier1{transform:translateX(-14px) rotate(-2deg);}
+.cake.cut .tier2{transform:translateX(10px) rotate(2deg);}
+.cake.cut::after{content:'';position:absolute;top:0;left:50%;width:3px;height:100%;background:#8885;}
+.knife{font-size:2rem;position:absolute;top:-10px;right:-10px;cursor:grab;user-select:none;}
+
+/* ---- Step 4: envelope ---- */
+.envelope{width:280px;height:190px;position:relative;cursor:pointer;margin-top:20px;perspective:1000px;}
+.env-body{position:absolute;inset:0;background:var(--peach);border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,.15);overflow:hidden;}
+.env-flap{position:absolute;top:0;left:0;width:100%;height:0;border-left:140px solid transparent;border-right:140px solid transparent;
+  border-top:95px solid #ffcfa3;transform-origin:top;transition:transform .6s;z-index:3;}
+.envelope.open .env-flap{transform:rotateX(180deg);}
+.letter{position:absolute;left:14px;right:14px;bottom:-140px;background:var(--card-bg);border-radius:6px;padding:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,.15);transition:transform .6s .3s;font-size:.85rem;z-index:2;max-height:170px;overflow:auto;}
+.envelope.open .letter{transform:translateY(-150px);}
+
+/* ---- Step 5: gallery ---- */
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:20px;max-width:800px;margin-top:10px;}
+.polaroid{background:#fff;padding:10px 10px 26px;border-radius:4px;box-shadow:0 6px 14px rgba(0,0,0,.15);transform:rotate(var(--r,0deg));transition:transform .3s;}
+.polaroid:hover{transform:rotate(0deg) scale(1.05);}
+.photo-box{width:100%;aspect-ratio:1/1;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:2.4rem;}
+.polaroid figcaption{margin-top:8px;font-size:.85rem;color:var(--text);}
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+
+<!-- STEP 1 -->
+<section class="step active" id="step1">
+  <h1 id="wish-title">🎉 Happy Birthday, <span class="name-slot"></span>! 🎂</h1>
+  <p>Get ready for a little birthday adventure made just for you...</p>
+  <button onclick="goTo(2)">Next ➜</button>
+</section>
+
+<!-- STEP 2: balloons -->
+<section class="step" id="step2">
+  <h1>Pop a Balloon! 🎈</h1>
+  <p>Tap each balloon to reveal a birthday wish.</p>
+  <div class="balloon-field" id="balloonField"></div>
+  <button id="toStep3Btn" class="hidden" onclick="goTo(3)">Next ➜</button>
+</section>
+
+<!-- STEP 3: cake -->
+<section class="step" id="step3">
+  <h1>Make a Wish 🕯️</h1>
+  <p>Blow out the candles, then cut the cake!</p>
+  <div class="cake-wrap">
+    <div class="candles" id="candles"></div>
+    <div class="cake" id="cake">
+      <div class="tier tier2"></div>
+      <div class="tier tier1"></div>
+      <span class="knife" id="knife" title="Drag me or click Cut Cake">🔪</span>
+    </div>
+    <div class="plate"></div>
+  </div>
+  <div>
+    <button id="cutBtn" disabled onclick="cutCake()">Cut Cake 🍰</button>
+    <button id="toStep4Btn" class="hidden" onclick="goTo(4)">Next ➜</button>
+  </div>
+</section>
+
+<!-- STEP 4: envelope -->
+<section class="step" id="step4">
+  <h1>A Little Note For You 💌</h1>
+  <p>Click the envelope to open it.</p>
+  <div class="envelope" id="envelope" onclick="openEnvelope()">
+    <div class="env-body">
+      <div class="letter" id="letterText"></div>
+    </div>
+    <div class="env-flap"></div>
+  </div>
+  <button id="toStep5Btn" class="hidden" onclick="goTo(5)">Next ➜</button>
+</section>
+
+<!-- STEP 5: gallery -->
+<section class="step" id="step5">
+  <h1>Memories 📸</h1>
+  <div class="gallery" id="gallery"></div>
+  <button onclick="restart()">Replay 🔁</button>
+</section>
+
+<script>
+/* ============================================================
+   EDIT THIS CONFIG SECTION TO CUSTOMIZE THE CARD
+   ============================================================ */
+const CONFIG = {
+  name: "Alex", // <-- change the birthday person's name here
+
+  // Wish shown when each balloon is popped (must have 5 entries)
+  balloonWishes: [
+    "May your year be filled with joy and laughter! 🎈",
+    "Wishing you health, wealth, and happiness! 💖",
+    "You deserve all the good things coming your way! 🌟",
+    "Here's to new adventures and beautiful memories! ✨",
+    "Never stop shining as bright as you do! 🌈"
+  ],
+
+  // Heartfelt message inside the envelope (Step 4)
+  letterMessage:
+    "Happy Birthday! Every year I get to know you, I'm reminded of how lucky I am to have you in my life. " +
+    "You bring so much warmth, laughter, and kindness to everyone around you. I hope today is as wonderful " +
+    "as you are, and that this new year brings you everything your heart desires. Cheers to you! 🎉",
+
+  // Photo gallery items (Step 5). Replace `emoji` with an <img> if you have real photos —
+  // e.g. set `image: "data:image/png;base64,...."` and the code below will use it instead.
+  photos: [
+    { emoji: "🎂", caption: "That time we celebrated together", color: "#ffd1e3" },
+    { emoji: "🎁", caption: "Best gift-opening reactions ever", color: "#e3d1ff" },
+    { emoji: "🥳", caption: "Party mode: activated", color: "#d1ffe8" },
+    { emoji: "📸", caption: "A memory worth keeping forever", color: "#ffe3d1" }
+  ]
+};
+/* ============================================================ */
+
+document.querySelectorAll('.name-slot').forEach(el => el.textContent = CONFIG.name);
+document.getElementById('letterText').textContent = CONFIG.letterMessage;
+
+function goTo(n){
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+  if(n===2) initBalloons();
+  if(n===3) initCake();
+  if(n===5) initGallery();
+}
+
+/* ---------- Confetti (Step 1 background) ---------- */
+const canvas = document.getElementById('confetti-canvas');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+const colors = ['#ff6fa5','#ffd1e3','#e3d1ff','#d1ffe8','#ffe3d1','#ffb6c9'];
+let confetti = Array.from({length:80}, () => ({
+  x: Math.random()*innerWidth, y: Math.random()*-innerHeight,
+  r: 4+Math.random()*6, c: colors[Math.floor(Math.random()*colors.length)],
+  speed: 1+Math.random()*3, drift: Math.random()*2-1
+}));
+function drawConfetti(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  confetti.forEach(p=>{
+    p.y += p.speed; p.x += p.drift;
+    if(p.y > innerHeight){ p.y = -10; p.x = Math.random()*innerWidth; }
+    ctx.fillStyle = p.c;
+    ctx.fillRect(p.x, p.y, p.r, p.r*1.6);
+  });
+  requestAnimationFrame(drawConfetti);
+}
+drawConfetti();
+
+/* ---------- Step 2: Balloons ---------- */
+let poppedCount = 0;
+function initBalloons(){
+  poppedCount = 0;
+  document.getElementById('toStep3Btn').classList.add('hidden');
+  const field = document.getElementById('balloonField');
+  field.innerHTML = '';
+  const cols = ['#ff6fa5','#a78bfa','#4fd1a5','#ffb454','#5fb0ff'];
+  CONFIG.balloonWishes.forEach((wish, i) => {
+    const b = document.createElement('div');
+    b.className = 'balloon';
+    b.style.background = cols[i % cols.length];
+    b.style.left = (10 + i*17) + '%';
+    b.style.animationDelay = (i*0.4)+'s';
+    b.onclick = () => popBalloon(b, wish);
+    field.appendChild(b);
+  });
+}
+function popBalloon(el, wish){
+  if(el.classList.contains('popped')) return;
+  el.classList.add('popped');
+  poppedCount++;
+  showWish(wish);
+  if(poppedCount >= CONFIG.balloonWishes.length){
+    document.getElementById('toStep3Btn').classList.remove('hidden');
+  }
+}
+function showWish(text){
+  const modal = document.createElement('div');
+  modal.className = 'wish-modal';
+  modal.innerHTML = `<div class="wish-box"><p>${text}</p><button onclick="this.closest('.wish-modal').remove()">Yay! 💕</button></div>`;
+  modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+/* ---------- Step 3: Cake ---------- */
+let candlesOut = 0, totalCandles = 3;
+function initCake(){
+  candlesOut = 0;
+  document.getElementById('cake').classList.remove('cut');
+  document.getElementById('cutBtn').disabled = true;
+  document.getElementById('toStep4Btn').classList.add('hidden');
+  const wrap = document.getElementById('candles');
+  wrap.innerHTML = '';
+  for(let i=0;i<totalCandles;i++){
+    const c = document.createElement('div');
+    c.className = 'candle';
+    c.innerHTML = '<span class="flame"></span>';
+    c.querySelector('.flame').onclick = () => blowCandle(c);
+    wrap.appendChild(c);
+  }
+}
+function blowCandle(c){
+  if(c.classList.contains('out')) return;
+  c.classList.add('out');
+  candlesOut++;
+  if(candlesOut >= totalCandles) document.getElementById('cutBtn').disabled = false;
+}
+function cutCake(){
+  document.getElementById('cake').classList.add('cut');
+  document.getElementById('toStep4Btn').classList.remove('hidden');
+}
+// optional: drag the knife icon a little for fun (click still works via Cut Cake button)
+const knife = document.getElementById('knife');
+knife.addEventListener('click', () => { if(!document.getElementById('cutBtn').disabled) cutCake(); });
+
+/* ---------- Step 4: Envelope ---------- */
+function openEnvelope(){
+  const env = document.getElementById('envelope');
+  env.classList.add('open');
+  document.getElementById('toStep4Btn'); // noop placeholder
+  setTimeout(() => document.getElementById('toStep5Btn').classList.remove('hidden'), 500);
+}
+
+/* ---------- Step 5: Gallery ---------- */
+function initGallery(){
+  const gal = document.getElementById('gallery');
+  gal.innerHTML = '';
+  CONFIG.photos.forEach((p, i) => {
+    const fig = document.createElement('figure');
+    fig.className = 'polaroid';
+    fig.style.setProperty('--r', (i%2===0? -4: 4)+'deg');
+    const inner = p.image
+      ? `<img src="${p.image}" style="width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:2px;">`
+      : `<div class="photo-box" style="background:${p.color}">${p.emoji}</div>`;
+    fig.innerHTML = inner + `<figcaption>${p.caption}</figcaption>`;
+    gal.appendChild(fig);
+  });
+}
+
+function restart(){
+  goTo(1);
+}
+</script>
+</body>
+</html>
